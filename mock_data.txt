@@ -1,0 +1,15 @@
+# Capítulo 8: Momento Lineal y Colisiones
+
+## 8.1 Momento Lineal
+El momento lineal (o cantidad de movimiento) de un objeto se define como el producto de su masa y su velocidad. Se denota comúnmente con la letra p. 
+p = m * v
+El momento lineal es una cantidad vectorial, lo que significa que tiene magnitud y dirección.
+
+## 8.2 Conservación del Momento Lineal
+La ley de conservación del momento lineal establece que si la fuerza neta externa que actúa sobre un sistema de partículas es cero, el momento lineal total del sistema permanece constante. 
+En una colisión entre dos objetos aislados, el momento total antes de la colisión es igual al momento total después de la colisión.
+m1*v1_i + m2*v2_i = m1*v1_f + m2*v2_f
+
+## 8.3 Colisiones Elásticas e Inelásticas
+En una colisión elástica, tanto el momento lineal como la energía cinética del sistema se conservan. Los objetos rebotan sin deformación permanente.
+En una colisión inelástica, el momento lineal se conserva, pero la energía cinética no. Parte de la energía cinética se transforma en otras formas de energía, como calor o sonido, debido a la deformación de los objetos. En una colisión perfectamente inelástica, los dos objetos se unen y se mueven juntos después del impacto con una velocidad común.
