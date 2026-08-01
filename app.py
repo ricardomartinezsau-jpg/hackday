@@ -6,7 +6,7 @@ import streamlit as st
 from dotenv import load_dotenv
 
 import carbon
-from agent import MODEL_FAST, MODEL_QUALITY, GemmaEduAgent
+from agent import LEVELS, MODEL_FAST, MODEL_QUALITY, GemmaEduAgent
 from rag import EMBED_MODEL, EduRAG
 
 load_dotenv()
@@ -110,6 +110,23 @@ with col_b:
         label_visibility="collapsed",
     )
 
+st.markdown(
+    '<div class="cds-label">03 — Nivel cognitivo objetivo</div>', unsafe_allow_html=True
+)
+nivel = st.radio(
+    "Nivel",
+    list(LEVELS.keys()),
+    index=1,
+    horizontal=True,
+    format_func=lambda n: {
+        "Basico": "Basico · secundaria",
+        "Intermedio": "Intermedio · bachillerato",
+        "Avanzado": "Avanzado · universitario",
+    }[n],
+    label_visibility="collapsed",
+)
+st.caption(LEVELS[nivel])
+
 generar = st.button("Generar andamiaje pedagogico", type="primary")
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -132,7 +149,7 @@ if generar:
     t0 = time.time()
     try:
         with st.spinner("Gemma 4 generando el andamiaje pedagogico…"):
-            resultado = agent.generate_analogy(contexto, interes)
+            resultado = agent.generate_analogy(contexto, interes, level=nivel)
     except Exception as e:  # noqa: BLE001 - la demo nunca debe morir en pantalla
         st.error(f"Fallo la generacion con Gemma 4: {e}")
         st.stop()
@@ -143,7 +160,7 @@ if generar:
     carbon.metrics([
         ("Generacion Gemma 4", f"{total:.1f}s", True),
         ("Recuperacion RAG", f"{ms_rag} ms", False),
-        ("Filas de mapeo", str(len(resultado["mapping_matrix"])), False),
+        ("Nivel", nivel, False),
         ("Validacion", "Pydantic OK", False),
     ])
 

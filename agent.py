@@ -75,13 +75,36 @@ ROLE_PREAMBLE = (
 )
 
 
+# El andamiaje solo funciona si cae en la zona de desarrollo proximo del alumno:
+# una analogia correcta pero calibrada al nivel equivocado no ensena nada. El
+# nivel modula el prompt, nunca el esquema de salida.
+LEVELS = {
+    "Basico": (
+        "Secundaria: usa lenguaje cotidiano, evita formulas y simbolos. "
+        "La analogia debe apoyarse solo en experiencias fisicas directas."
+    ),
+    "Intermedio": (
+        "Bachillerato: introduce la formula del concepto y vocabulario tecnico "
+        "basico, siempre traducido dentro de la analogia."
+    ),
+    "Avanzado": (
+        "Universitario: usa notacion formal, nombra las condiciones de validez "
+        "y senala al menos un caso limite donde la analogia deja de sostenerse."
+    ),
+}
+
+
 class GemmaEduAgent:
     def __init__(self, api_key: str, model_name: str = MODEL_QUALITY):
         self.api_key = api_key
         self.model_name = model_name
 
-    def _build_prompt(self, context_text: str, student_interest: str) -> str:
+    def _build_prompt(
+        self, context_text: str, student_interest: str, level: str = "Intermedio"
+    ) -> str:
         return f"""{ROLE_PREAMBLE}
+
+Nivel cognitivo objetivo: {level}. {LEVELS.get(level, '')}
 
 Contexto Recuperado del Libro de Texto (OER):
 {context_text}
@@ -97,9 +120,17 @@ Genera una analogia pedagogica estructurada respetando estos limites:
 
 La brevedad es un requisito pedagogico: el docente lee esto entre clases."""
 
-    def _payload(self, context_text: str, student_interest: str, temperature: float = 0.7) -> dict:
+    def _payload(
+        self,
+        context_text: str,
+        student_interest: str,
+        temperature: float = 0.7,
+        level: str = "Intermedio",
+    ) -> dict:
         return {
-            "contents": [{"parts": [{"text": self._build_prompt(context_text, student_interest)}]}],
+            "contents": [
+                {"parts": [{"text": self._build_prompt(context_text, student_interest, level)}]}
+            ],
             "generationConfig": {
                 "responseMimeType": "application/json",
                 "responseSchema": RESPONSE_SCHEMA,
@@ -164,7 +195,11 @@ La brevedad es un requisito pedagogico: el docente lee esto entre clases."""
             raise ValueError(f"La salida de Gemma no cumple el esquema pedagogico: {e}") from e
 
     def generate_analogy(
-        self, context_text: str, student_interest: str, temperature: float = 0.7
+        self,
+        context_text: str,
+        student_interest: str,
+        temperature: float = 0.7,
+        level: str = "Intermedio",
     ) -> dict:
         """Genera y valida una analogia, reintentando ante degeneracion.
 
@@ -179,7 +214,7 @@ La brevedad es un requisito pedagogico: el docente lee esto entre clases."""
             try:
                 resp = requests.post(
                     url,
-                    json=self._payload(context_text, student_interest, temp),
+                    json=self._payload(context_text, student_interest, temp, level),
                     timeout=180,
                 )
                 resp.raise_for_status()
