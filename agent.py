@@ -246,33 +246,30 @@ La brevedad es un requisito pedagogico: el docente lee esto entre clases."""
     ) -> dict:
         """Genera el andamiaje leyendo la foto de una pagina de libro.
 
-        Este camino es integramente Gemma 4: el modelo hace de OCR, comprende
-        la pagina y razona sobre ella en una sola pasada. No interviene ningun
-        embedding, porque no hay nada que recuperar: el docente ya eligio la
-        pagina apuntando con la camara.
+        Se hace en dos pasadas de Gemma, no en una. Pedirle transcribir la
+        imagen y emitir JSON restringido simultaneamente lo desestabiliza: en
+        medicion, una sola pasada acertaba 1 de 4 veces, degenerando en bucles
+        de repeticion que truncaban la salida. Separar percepcion de
+        razonamiento -primero transcribir en texto libre, luego el camino de
+        texto ya probado- devuelve la fiabilidad sin salir de Gemma.
 
         Importa porque el corpus real de un profesor no es un indice vectorial,
         es el libro de fisica que tiene sobre el escritorio.
         """
-        prompt = f"""{ROLE_PREAMBLE}
+        transcripcion = self.read_page_image(image_b64, mime_type)
+        return self.generate_analogy(
+            transcripcion, student_interest, temperature=temperature, level=level
+        )
 
-Nivel cognitivo objetivo: {level}. {LEVELS.get(level, '')}
+    def read_page_image(self, image_b64: str, mime_type: str) -> str:
+        """Pasada 1: Gemma 4 transcribe la pagina en texto libre.
 
-La imagen adjunta es la fotografia de una pagina de un libro de texto.
-Leela, identifica el concepto tecnico principal y usalo como unica fuente.
-
-Interes del Estudiante:
-{student_interest}
-
-Genera una analogia pedagogica estructurada respetando estos limites:
-- conceptual_analogy: maximo 90 palabras, en segunda persona. No repitas frases.
-- mapping_matrix: exactamente 4 cadenas con el formato "academico :: analogico".
-- source_citation: una frase literal tomada de la pagina fotografiada.
-- verification_question: una sola pregunta, sin respuesta."""
-
+        Sin esquema ni JSON. Es una tarea de percepcion pura, y el modelo la
+        resuelve de forma estable justamente porque no se le pide nada mas.
+        """
         url = f"{API_BASE}{self.model_name}:generateContent?key={self.api_key}"
         last_error = None
-        for temp in (temperature, 0.4, 0.2):
+        for temp in (0.2, 0.4):
             try:
                 resp = requests.post(
                     url,
@@ -281,26 +278,30 @@ Genera una analogia pedagogica estructurada respetando estos limites:
                             {
                                 "parts": [
                                     {"inline_data": {"mime_type": mime_type, "data": image_b64}},
-                                    {"text": prompt},
+                                    {
+                                        "text": "Transcribe el contenido academico de esta pagina "
+                                        "de libro de texto: titulo de seccion, definiciones y "
+                                        "formulas. Devuelve solo la transcripcion, sin comentarios."
+                                    },
                                 ]
                             }
                         ],
                         "generationConfig": {
-                            "responseMimeType": "application/json",
-                            "responseSchema": RESPONSE_SCHEMA,
                             "temperature": temp,
                             "topP": 0.95,
-                            "maxOutputTokens": 900,
+                            "maxOutputTokens": 600,
                         },
                     },
-                    timeout=180,
+                    timeout=120,
                 )
                 resp.raise_for_status()
-                text = resp.json()["candidates"][0]["content"]["parts"][0]["text"]
-                return self.parse(text)
-            except (ValueError, requests.RequestException, KeyError, IndexError) as e:
+                texto = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+                if len(texto) > 40:
+                    return texto
+                last_error = ValueError("transcripcion demasiado corta")
+            except (requests.RequestException, KeyError, IndexError) as e:
                 last_error = e
-        raise RuntimeError(f"Gemma 4 no pudo interpretar la pagina: {last_error}")
+        raise RuntimeError(f"Gemma 4 no pudo leer la pagina: {last_error}")
 
     def warmup(self) -> bool:
         """Golpea el endpoint al abrir la app para que el primer clic del juez
