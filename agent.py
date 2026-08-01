@@ -19,15 +19,12 @@ class PedagogicalAnalogy(BaseModel):
 class GemmaEduAgent:
     def __init__(self, api_key: str):
         genai.configure(api_key=api_key)
-        # Usamos gemini-1.5-flash como proxy veloz o si hay acceso directo a Gemma via API, ajustamos el nombre del modelo.
+        # Usamos gemma-2-9b-it como proxy veloz o si hay acceso directo a Gemma via API, ajustamos el nombre del modelo.
         # Para el hackday, si queremos usar modelos Gemma en AI studio usaríamos el endpoint adecuado.
-        # Asumiremos gemini-1.5-flash para la demo rápida ya que soporta Function Calling de forma nativa e impecable.
+        # Asumiremos gemma-2-9b-it para la demo rápida ya que soporta Function Calling de forma nativa e impecable.
         self.model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
-            system_instruction="""Eres un diseñador instruccional riguroso. Tu objetivo es generar 
-            andamiaje conceptual basado estrictamente en el texto fuente proporcionado. 
-            No debes alucinar conceptos. Utiliza el contexto recuperado para crear una analogía 
-            profunda basada en los intereses del estudiante."""
+            model_name="gemma-2-9b-it",
+            system_instruction="Eres un experto en pedagogía. Debes explicar conceptos técnicos usando analogías. Basa tu respuesta SÓLO en el texto fuente proporcionado."
         )
 
     def generate_analogy(self, context_text: str, student_interest: str) -> dict:
