@@ -236,6 +236,72 @@ La brevedad es un requisito pedagogico: el docente lee esto entre clases."""
         except ValueError:
             return self.generate_analogy(context_text, student_interest, temperature=0.2)
 
+    def generate_analogy_from_image(
+        self,
+        image_b64: str,
+        mime_type: str,
+        student_interest: str,
+        level: str = "Intermedio",
+        temperature: float = 0.7,
+    ) -> dict:
+        """Genera el andamiaje leyendo la foto de una pagina de libro.
+
+        Este camino es integramente Gemma 4: el modelo hace de OCR, comprende
+        la pagina y razona sobre ella en una sola pasada. No interviene ningun
+        embedding, porque no hay nada que recuperar: el docente ya eligio la
+        pagina apuntando con la camara.
+
+        Importa porque el corpus real de un profesor no es un indice vectorial,
+        es el libro de fisica que tiene sobre el escritorio.
+        """
+        prompt = f"""{ROLE_PREAMBLE}
+
+Nivel cognitivo objetivo: {level}. {LEVELS.get(level, '')}
+
+La imagen adjunta es la fotografia de una pagina de un libro de texto.
+Leela, identifica el concepto tecnico principal y usalo como unica fuente.
+
+Interes del Estudiante:
+{student_interest}
+
+Genera una analogia pedagogica estructurada respetando estos limites:
+- conceptual_analogy: maximo 90 palabras, en segunda persona. No repitas frases.
+- mapping_matrix: exactamente 4 cadenas con el formato "academico :: analogico".
+- source_citation: una frase literal tomada de la pagina fotografiada.
+- verification_question: una sola pregunta, sin respuesta."""
+
+        url = f"{API_BASE}{self.model_name}:generateContent?key={self.api_key}"
+        last_error = None
+        for temp in (temperature, 0.4, 0.2):
+            try:
+                resp = requests.post(
+                    url,
+                    json={
+                        "contents": [
+                            {
+                                "parts": [
+                                    {"inline_data": {"mime_type": mime_type, "data": image_b64}},
+                                    {"text": prompt},
+                                ]
+                            }
+                        ],
+                        "generationConfig": {
+                            "responseMimeType": "application/json",
+                            "responseSchema": RESPONSE_SCHEMA,
+                            "temperature": temp,
+                            "topP": 0.95,
+                            "maxOutputTokens": 900,
+                        },
+                    },
+                    timeout=180,
+                )
+                resp.raise_for_status()
+                text = resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+                return self.parse(text)
+            except (ValueError, requests.RequestException, KeyError, IndexError) as e:
+                last_error = e
+        raise RuntimeError(f"Gemma 4 no pudo interpretar la pagina: {last_error}")
+
     def warmup(self) -> bool:
         """Golpea el endpoint al abrir la app para que el primer clic del juez
         no pague el arranque en frio."""

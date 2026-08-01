@@ -1,3 +1,4 @@
+import base64
 import html
 import os
 import time
@@ -86,6 +87,29 @@ with st.sidebar:
         "andamiaje para que el alumno llegue solo."
     )
 
+st.markdown(
+    '<div class="cds-label">00 — Fuente del concepto</div>', unsafe_allow_html=True
+)
+foto = st.file_uploader(
+    "Foto de la pagina",
+    type=["jpg", "jpeg", "png"],
+    help="Fotografia una pagina del libro y Gemma 4 la lee directamente.",
+    label_visibility="collapsed",
+)
+if foto is not None:
+    st.markdown(
+        carbon.tag("Multimodal · Gemma 4 lee la pagina", "green")
+        + " "
+        + carbon.tag("Sin RAG: 100% Gemma", "blue"),
+        unsafe_allow_html=True,
+    )
+    st.image(foto, width=340)
+else:
+    st.caption(
+        "Sin foto se usa el corpus OER indexado. Con foto, Gemma 4 hace de OCR y "
+        "razona sobre la pagina en una sola pasada."
+    )
+
 col_a, col_b = st.columns([1, 1], gap="large")
 with col_a:
     st.markdown('<div class="cds-label">01 — Concepto de la curricula</div>', unsafe_allow_html=True)
@@ -135,9 +159,14 @@ if generar:
         st.error("Ingresa al menos un interes del alumno para anclar la analogia.")
         st.stop()
 
-    t_rag = time.time()
-    contexto = rag.search(query=tema)
-    ms_rag = int((time.time() - t_rag) * 1000)
+    modo_multimodal = foto is not None
+    if modo_multimodal:
+        contexto = None
+        ms_rag = 0
+    else:
+        t_rag = time.time()
+        contexto = rag.search(query=tema)
+        ms_rag = int((time.time() - t_rag) * 1000)
 
     if agent is None:
         st.warning(
@@ -148,8 +177,17 @@ if generar:
 
     t0 = time.time()
     try:
-        with st.spinner("Gemma 4 generando el andamiaje pedagogico…"):
-            resultado = agent.generate_analogy(contexto, interes, level=nivel)
+        if modo_multimodal:
+            with st.spinner("Gemma 4 leyendo la pagina y generando el andamiaje…"):
+                resultado = agent.generate_analogy_from_image(
+                    base64.b64encode(foto.getvalue()).decode(),
+                    foto.type or "image/jpeg",
+                    interes,
+                    level=nivel,
+                )
+        else:
+            with st.spinner("Gemma 4 generando el andamiaje pedagogico…"):
+                resultado = agent.generate_analogy(contexto, interes, level=nivel)
     except Exception as e:  # noqa: BLE001 - la demo nunca debe morir en pantalla
         st.error(f"Fallo la generacion con Gemma 4: {e}")
         st.stop()
@@ -159,13 +197,15 @@ if generar:
 
     carbon.metrics([
         ("Generacion Gemma 4", f"{total:.1f}s", True),
-        ("Recuperacion RAG", f"{ms_rag} ms", False),
+        ("Fuente", "Imagen (multimodal)" if modo_multimodal else f"RAG {ms_rag} ms", False),
         ("Nivel", nivel, False),
         ("Validacion", "Pydantic OK", False),
     ])
 
     carbon.source_container(
-        "Fuente certificada — recuperada, no generada",
+        "Fuente — leida de la pagina fotografiada por Gemma 4"
+        if modo_multimodal
+        else "Fuente certificada — recuperada, no generada",
         esc(resultado["source_citation"]),
     )
 
