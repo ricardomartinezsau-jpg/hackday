@@ -19,11 +19,11 @@ class PedagogicalAnalogy(BaseModel):
 class GemmaEduAgent:
     def __init__(self, api_key: str):
         genai.configure(api_key=api_key)
-        # Usamos gemma-4-9b-it como proxy veloz o si hay acceso directo a Gemma via API, ajustamos el nombre del modelo.
+        # Usamos gemma-4-31b-it como proxy veloz o si hay acceso directo a Gemma via API, ajustamos el nombre del modelo.
         # Para el hackday, si queremos usar modelos Gemma en AI studio usaríamos el endpoint adecuado.
-        # Asumiremos gemma-4-9b-it para la demo rápida ya que soporta Function Calling de forma nativa e impecable.
+        # Asumiremos gemma-4-31b-it para la demo rápida ya que soporta Function Calling de forma nativa e impecable.
         self.model = genai.GenerativeModel(
-            model_name="gemma-4-9b-it",
+            model_name="gemma-4-31b-it",
             system_instruction="Eres un experto en pedagogía. Debes explicar conceptos técnicos usando analogías. Basa tu respuesta SÓLO en el texto fuente proporcionado."
         )
 
