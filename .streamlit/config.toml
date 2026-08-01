@@ -1,0 +1,11 @@
+# Tokens del tema Gray 100 de IBM Carbon Design System.
+[theme]
+base = "dark"
+primaryColor = "#0f62fe"          # Blue 60  - interactive primary
+backgroundColor = "#161616"       # Gray 100 - background
+secondaryBackgroundColor = "#262626"  # Gray 90 - layer 01
+textColor = "#f4f4f4"             # Gray 10  - text primary
+font = "sans serif"
+
+[server]
+headless = true
